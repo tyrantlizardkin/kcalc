@@ -102,6 +102,15 @@ npm.cmd run typecheck
 npx.cmd expo install --check
 ```
 
+## Google Drive Backup Setup
+
+kcalc backs up to your own Google Drive `appDataFolder` using your own OAuth client (testing mode — no Google verification needed for personal single-user use):
+
+1. In Google Cloud Console, create a project (or reuse one), enable the "Google Drive API".
+2. Create an OAuth 2.0 Client ID of type "Android", using package name `com.dyscostic.kcalc` and the SHA-1 fingerprint of your EAS build's signing credential (`npx.cmd eas credentials` to view it).
+3. Also create a "Web application" OAuth client ID (required by `@react-native-google-signin/google-signin` as the `webClientId` even on Android).
+4. Put the web client ID in `app.config.ts` under `extra.googleWebClientId`.
+
 ## Planned Next Work
 
 - Plan 2: photo recognition with Gemini and confirm-to-log flow
