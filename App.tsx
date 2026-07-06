@@ -1,10 +1,12 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, AppState, SafeAreaView, StyleSheet, View } from 'react-native';
 import { useFonts, BarlowCondensed_400Regular, BarlowCondensed_700Bold, BarlowCondensed_900Black } from '@expo-google-fonts/barlow-condensed';
 import { PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans';
 import { TabBar, TabKey } from './src/components/TabBar';
 import { colors } from './src/theme';
+import { getRepos } from './src/db';
+import { syncExercise } from './src/health/healthConnect';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { TrendsScreen } from './src/screens/TrendsScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
@@ -34,6 +36,23 @@ export default function App() {
   });
 
   const bumpReload = () => setReloadKey((k) => k + 1);
+
+  useEffect(() => {
+    const runSync = async () => {
+      try {
+        const repos = await getRepos();
+        await syncExercise(repos);
+        bumpReload();
+      } catch {
+        // non-fatal: Health Connect may be unavailable, permission denied, or no data yet
+      }
+    };
+    runSync();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') runSync();
+    });
+    return () => subscription.remove();
+  }, []);
 
   if (!fontsLoaded) {
     return (
@@ -74,6 +93,9 @@ export default function App() {
             onLogMealManual={() => setMealOpen(true)}
             onAddWeight={() => setWeightOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
+            onSyncNow={() => {
+              getRepos().then((repos) => syncExercise(repos)).then(bumpReload).catch(() => {});
+            }}
             reloadKey={reloadKey}
           />
         )}

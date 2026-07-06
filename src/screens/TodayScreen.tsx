@@ -28,12 +28,14 @@ export function TodayScreen({
   onLogMealManual,
   onAddWeight,
   onOpenSettings,
+  onSyncNow,
   reloadKey,
 }: {
   onLogMealPhoto: () => void;
   onLogMealManual: () => void;
   onAddWeight: () => void;
   onOpenSettings: () => void;
+  onSyncNow: () => void;
   reloadKey: number;
 }) {
   const [data, setData] = useState<TodayData | null>(null);
@@ -85,6 +87,9 @@ export function TodayScreen({
         <View style={styles.todayRow}>
           <Pressable accessibilityLabel="Open settings" accessibilityRole="button" style={styles.gear} onPress={onOpenSettings}>
             <Text style={styles.gearIcon}>*</Text>
+          </Pressable>
+          <Pressable accessibilityLabel="Sync exercise" accessibilityRole="button" style={styles.gear} onPress={onSyncNow}>
+            <Text style={styles.gearIcon}>↻</Text>
           </Pressable>
           <Text style={styles.todayLabel}>TODAY</Text>
         </View>
