@@ -179,9 +179,10 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
       repos.settings.getAll(),
       repos.weights.all(),
     ]);
+    const latest = weights.length > 0 ? weights[weights.length - 1] : null;
     return {
       summary: daySummary(totals.kcal, burned, settings.kcalTarget),
-      deltas: weightDeltas(weights, date),
+      deltas: latest ? weightDeltas(weights, latest.date) : null,
     };
   },
 };

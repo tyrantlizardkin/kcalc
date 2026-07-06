@@ -109,3 +109,20 @@ test('get_today_summary returns net summary and null deltas with no weights', as
   expect((result.summary as { eatenKcal: number }).eatenKcal).toBe(100);
   expect(result.deltas).toBeNull();
 });
+
+test('get_today_summary computes weight deltas using the latest weight entry date, not the turn date', async () => {
+  const repos = await makeRepos();
+  // Seed weight entries on dates earlier than the turn date (2026-07-06).
+  // Latest entry is 2026-07-05 @ 198 lbs; turn date itself has no weight logged.
+  await repos.weights.upsert('2026-06-28', 200, null);
+  await repos.weights.upsert('2026-07-04', 199, null);
+  await repos.weights.upsert('2026-07-05', 198, null);
+
+  const result = await TOOL_HANDLERS.get_today_summary({}, repos, '2026-07-06');
+
+  expect(result.deltas).not.toBeNull();
+  const deltas = result.deltas as { priorDelta: number | null; sevenDayDelta: number | null };
+  // priorDelta: 198 - 199 = -1.0 lbs; sevenDayDelta: 198 - 200 = -2.0 lbs
+  expect(deltas.priorDelta).toBe(-1);
+  expect(deltas.sevenDayDelta).toBe(-2);
+});
