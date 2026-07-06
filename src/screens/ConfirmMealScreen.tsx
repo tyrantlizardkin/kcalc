@@ -7,6 +7,8 @@ import { getRepos } from '../db';
 import { todayIso } from '../lib/dates';
 import { colors, fonts } from '../theme';
 
+type ConfirmErrors = Partial<Record<'kcal' | 'protein' | 'carbs' | 'fat', string>>;
+
 export function ConfirmMealScreen({
   photoBase64,
   photoUri,
@@ -20,6 +22,7 @@ export function ConfirmMealScreen({
 }) {
   const [result, setResult] = useState<RecognitionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<ConfirmErrors>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
@@ -31,6 +34,7 @@ export function ConfirmMealScreen({
   const runRecognition = async () => {
     setLoading(true);
     setError(null);
+    setFieldErrors({});
     try {
       const repos = await getRepos();
       const sfl = await repos.sfl.all();
@@ -42,7 +46,7 @@ export function ConfirmMealScreen({
       setCarbs(String(recognition.totals.carbsG));
       setFat(String(recognition.totals.fatG));
     } catch (e) {
-      setError(e instanceof Error && e.message.includes('rate limit') ? 'Gemini rate limit hit — try again shortly.' : 'Could not recognize photo. Try again.');
+      setError(e instanceof Error && e.message.includes('rate limit') ? 'Gemini rate limit hit - try again shortly.' : 'Could not recognize photo. Try again.');
     } finally {
       setLoading(false);
     }
@@ -54,17 +58,21 @@ export function ConfirmMealScreen({
   }, []);
 
   const save = async () => {
+    const parsed = parseFields();
+    if (!parsed) return;
+
     setSaving(true);
+    setError(null);
     try {
       const repos = await getRepos();
       await repos.meals.insert({
         date: todayIso(),
         name: name.trim() || 'Meal',
         detail: result?.notes ?? '',
-        kcal: Number(kcal) || 0,
-        proteinG: Number(protein) || 0,
-        carbsG: Number(carbs) || 0,
-        fatG: Number(fat) || 0,
+        kcal: parsed.kcal,
+        proteinG: parsed.proteinG,
+        carbsG: parsed.carbsG,
+        fatG: parsed.fatG,
         flags: Array.from(new Set(result?.items.flatMap((i) => i.flags) ?? [])),
         source: 'photo',
         photoUri,
@@ -75,6 +83,27 @@ export function ConfirmMealScreen({
     } finally {
       setSaving(false);
     }
+  };
+
+  const parseFields = () => {
+    const nextErrors: ConfirmErrors = {};
+    const parsedKcal = parsePositiveInt(kcal);
+    const parsedProtein = parseRequiredNonnegative(protein);
+    const parsedCarbs = parseRequiredNonnegative(carbs);
+    const parsedFat = parseRequiredNonnegative(fat);
+
+    if (parsedKcal == null) nextErrors.kcal = 'Enter kcal greater than 0.';
+    if (parsedProtein == null) nextErrors.protein = 'Use a number 0 or greater.';
+    if (parsedCarbs == null) nextErrors.carbs = 'Use a number 0 or greater.';
+    if (parsedFat == null) nextErrors.fat = 'Use a number 0 or greater.';
+
+    setFieldErrors(nextErrors);
+    setError(null);
+    if (Object.keys(nextErrors).length > 0 || parsedKcal == null || parsedProtein == null || parsedCarbs == null || parsedFat == null) {
+      return null;
+    }
+
+    return { kcal: parsedKcal, proteinG: parsedProtein, carbsG: parsedCarbs, fatG: parsedFat };
   };
 
   if (loading) {
@@ -105,13 +134,27 @@ export function ConfirmMealScreen({
       <ScrollView>
         {error && <Text style={styles.formError}>{error}</Text>}
         <Field label="NAME" value={name} onChange={setName} />
-        <Field label="KCAL" value={kcal} onChange={setKcal} keyboardType="numeric" />
-        <Field label="PROTEIN (G)" value={protein} onChange={setProtein} keyboardType="numeric" />
-        <Field label="CARBS (G)" value={carbs} onChange={setCarbs} keyboardType="numeric" />
-        <Field label="FAT (G)" value={fat} onChange={setFat} keyboardType="numeric" returnKeyType="done" />
+        <Field label="KCAL" value={kcal} onChange={setKcal} keyboardType="numeric" error={fieldErrors.kcal} />
+        <Field label="PROTEIN (G)" value={protein} onChange={setProtein} keyboardType="numeric" error={fieldErrors.protein} />
+        <Field label="CARBS (G)" value={carbs} onChange={setCarbs} keyboardType="numeric" error={fieldErrors.carbs} />
+        <Field label="FAT (G)" value={fat} onChange={setFat} keyboardType="numeric" returnKeyType="done" error={fieldErrors.fat} />
       </ScrollView>
     </ModalShell>
   );
+}
+
+function parsePositiveInt(value: string): number | null {
+  const parsed = Number(value.trim());
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function parseRequiredNonnegative(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 const styles = StyleSheet.create({

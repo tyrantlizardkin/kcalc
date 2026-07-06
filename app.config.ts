@@ -23,7 +23,7 @@ const config: ExpoConfig = {
   extra: {
     eas: { projectId: 'ef728ace-a1f0-472e-82d2-bf3d7d871a37' },
     geminiApiKey: process.env.GEMINI_API_KEY ?? '',
-    googleWebClientId: 'REPLACE_ME_WITH_YOUR_WEB_CLIENT_ID',
+    googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID ?? '',
   },
   owner: 'jpcarlson',
   plugins: ['react-native-health-connect', '@react-native-google-signin/google-signin'],

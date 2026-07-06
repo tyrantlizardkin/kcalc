@@ -1,6 +1,7 @@
 import { initialize, requestPermission, readRecords } from 'react-native-health-connect';
 import { Repos } from '../db';
 import { HcExerciseRecord, dedupeRecords, toNewExercise } from '../lib/hcSync';
+import { dateToLocalIso } from '../lib/dates';
 import { estimateKcalBurned } from '../lib/metCalc';
 
 const PERMISSIONS = [
@@ -38,7 +39,7 @@ async function readExerciseSince(sinceMs: number, fallbackWeightLbs: number): Pr
 
     return {
       recordId: session.metadata?.id ?? `${session.startTime}-${activity}`,
-      date: session.startTime.slice(0, 10),
+      date: dateToLocalIso(session.startTime),
       activity,
       kcalBurned,
     };

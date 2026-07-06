@@ -162,3 +162,56 @@ test('restoreDump replaces existing data and round-trips through dumpAll', async
   expect(restoredDump.sfl.map((s) => s.name)).toEqual(['Chicken Breast']);
   expect(restoredDump.settings.kcalTarget).toBe(1600);
 });
+
+test('restoreDump rolls back local data if restore insertion fails after delete', async () => {
+  const db = makeTestDb();
+  await migrate(db);
+  const repos = {
+    weights: makeWeightsRepo(db),
+    meals: makeMealsRepo(db),
+    exercise: makeExerciseRepo(db),
+    sfl: makeSflRepo(db),
+    settings: makeSettingsRepo(db),
+    chat: { add: async () => 0, listByDate: async () => [] },
+  };
+
+  await repos.weights.upsert('2026-01-01', 180);
+  await repos.meals.insert({ date: '2026-01-01', name: 'Keep', detail: '', kcal: 100, proteinG: 1, carbsG: 2, fatG: 3, flags: [], source: 'manual', photoUri: null });
+
+  const validDump = fixtureDump({
+    weights: [{ id: 1, date: '2026-07-01', lbs: 175, flag: null, createdAt: 1 }],
+  });
+  const throwingRepos = {
+    ...repos,
+    weights: {
+      ...repos.weights,
+      upsert: async () => {
+        throw new Error('insert failed');
+      },
+    },
+  };
+
+  await expect(restoreDump(validDump, throwingRepos as unknown as import('../src/db').Repos, db)).rejects.toThrow('insert failed');
+
+  expect(await repos.weights.byDate('2026-01-01')).not.toBeNull();
+  expect((await repos.meals.listByDate('2026-01-01')).map((m) => m.name)).toEqual(['Keep']);
+});
+
+test('restoreDump rejects malformed backups before modifying local data', async () => {
+  const db = makeTestDb();
+  await migrate(db);
+  const repos = {
+    weights: makeWeightsRepo(db),
+    meals: makeMealsRepo(db),
+    exercise: makeExerciseRepo(db),
+    sfl: makeSflRepo(db),
+    settings: makeSettingsRepo(db),
+    chat: { add: async () => 0, listByDate: async () => [] },
+  };
+
+  await repos.weights.upsert('2026-01-01', 180);
+  const malformed = { ...fixtureDump(), weights: [{ id: 1, date: 'not-a-date', lbs: 175, flag: null, createdAt: 1 }] };
+
+  await expect(restoreDump(malformed as unknown as BackupDump, repos as unknown as import('../src/db').Repos, db)).rejects.toThrow('Invalid backup weights');
+  expect(await repos.weights.byDate('2026-01-01')).not.toBeNull();
+});
