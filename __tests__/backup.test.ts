@@ -104,10 +104,14 @@ test('restoreDump replaces existing data and round-trips through dumpAll', async
   // stale data that must be wiped
   await repos.weights.upsert('2020-01-01', 999);
   await repos.meals.insert({ date: '2020-01-01', name: 'Stale', detail: '', kcal: 1, proteinG: 0, carbsG: 0, fatG: 0, flags: [], source: 'manual', photoUri: null });
+  await repos.exercise.insert({ date: '2020-01-01', activity: 'StaleWorkout', kcalBurned: 500, source: 'manual', hcRecordId: null });
+  await repos.sfl.upsert({ name: 'StaleFood', serving: '100g', kcal: 100, proteinG: 10, carbsG: 5, fatG: 2, flags: [] });
 
   const source = await makeTestRepos();
   await source.weights.upsert('2026-07-01', 180.5);
   await source.meals.insert({ date: '2026-07-01', name: 'Eggs', detail: '', kcal: 300, proteinG: 20, carbsG: 2, fatG: 22, flags: [], source: 'manual', photoUri: null });
+  await source.exercise.insert({ date: '2026-07-01', activity: 'Run', kcalBurned: 400, source: 'manual', hcRecordId: null });
+  await source.sfl.upsert({ name: 'Chicken Breast', serving: '100g', kcal: 165, proteinG: 31, carbsG: 0, fatG: 3.6, flags: [] });
   await source.settings.set({ kcalTarget: 1600 });
   const dump = await dumpAll(source as unknown as import('../src/db').Repos);
 
@@ -118,5 +122,7 @@ test('restoreDump replaces existing data and round-trips through dumpAll', async
     dump.weights.map(({ date, lbs, flag }) => ({ date, lbs, flag }))
   );
   expect(restoredDump.meals.map((m) => m.name)).toEqual(['Eggs']);
+  expect(restoredDump.exercise.map((e) => e.activity)).toEqual(['Run']);
+  expect(restoredDump.sfl.map((s) => s.name)).toEqual(['Chicken Breast']);
   expect(restoredDump.settings.kcalTarget).toBe(1600);
 });
