@@ -5,8 +5,8 @@ import { useFonts, BarlowCondensed_400Regular, BarlowCondensed_700Bold, BarlowCo
 import { PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans';
 import { TabBar, TabKey } from './src/components/TabBar';
 import { colors } from './src/theme';
-import { Placeholder } from './src/screens/Placeholder';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { TrendsScreen } from './src/screens/TrendsScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { CaptureScreen } from './src/screens/CaptureScreen';
 import { ConfirmMealScreen } from './src/screens/ConfirmMealScreen';
@@ -76,7 +76,7 @@ export default function App() {
           />
         )}
         {tab === 'chat' && <ChatScreen />}
-        {tab === 'trends' && <Placeholder label="TRENDS" />}
+        {tab === 'trends' && <TrendsScreen reloadKey={reloadKey} />}
       </View>
       <TabBar active={tab} onChange={setTab} />
       <ManualMealModal visible={mealOpen} onClose={() => setMealOpen(false)} onSaved={bumpReload} />
