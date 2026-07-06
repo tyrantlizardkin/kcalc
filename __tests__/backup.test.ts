@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { stableStringify, hashDump, BackupDump, dumpAll } from '../src/lib/backup';
+import { stableStringify, hashDump, BackupDump, dumpAll, restoreDump } from '../src/lib/backup';
 import { makeTestDb } from './helpers/testDb';
 import { migrate } from '../src/db/schema';
 import { makeWeightsRepo } from '../src/db/weightsRepo';
@@ -87,4 +87,36 @@ test('dumpAll pulls every table into one snapshot', async () => {
   expect(dump.exercise).toHaveLength(1);
   expect(dump.sfl).toHaveLength(1);
   expect(dump.settings.kcalTarget).toBe(1500);
+});
+
+test('restoreDump replaces existing data and round-trips through dumpAll', async () => {
+  const db = makeTestDb();
+  await migrate(db);
+  const repos = {
+    weights: makeWeightsRepo(db),
+    meals: makeMealsRepo(db),
+    exercise: makeExerciseRepo(db),
+    sfl: makeSflRepo(db),
+    settings: makeSettingsRepo(db),
+    chat: { add: async () => 0, listByDate: async () => [] },
+  };
+
+  // stale data that must be wiped
+  await repos.weights.upsert('2020-01-01', 999);
+  await repos.meals.insert({ date: '2020-01-01', name: 'Stale', detail: '', kcal: 1, proteinG: 0, carbsG: 0, fatG: 0, flags: [], source: 'manual', photoUri: null });
+
+  const source = await makeTestRepos();
+  await source.weights.upsert('2026-07-01', 180.5);
+  await source.meals.insert({ date: '2026-07-01', name: 'Eggs', detail: '', kcal: 300, proteinG: 20, carbsG: 2, fatG: 22, flags: [], source: 'manual', photoUri: null });
+  await source.settings.set({ kcalTarget: 1600 });
+  const dump = await dumpAll(source as unknown as import('../src/db').Repos);
+
+  await restoreDump(dump, repos as unknown as import('../src/db').Repos, db);
+
+  const restoredDump = await dumpAll(repos as unknown as import('../src/db').Repos);
+  expect(restoredDump.weights.map(({ date, lbs, flag }) => ({ date, lbs, flag }))).toEqual(
+    dump.weights.map(({ date, lbs, flag }) => ({ date, lbs, flag }))
+  );
+  expect(restoredDump.meals.map((m) => m.name)).toEqual(['Eggs']);
+  expect(restoredDump.settings.kcalTarget).toBe(1600);
 });
