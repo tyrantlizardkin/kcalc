@@ -7,6 +7,7 @@ import { TabBar, TabKey } from './src/components/TabBar';
 import { colors } from './src/theme';
 import { getRepos } from './src/db';
 import { syncExercise } from './src/health/healthConnect';
+import { backupIfChanged, isDriveSignedIn } from './src/api/drive';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { TrendsScreen } from './src/screens/TrendsScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
@@ -50,6 +51,24 @@ export default function App() {
     runSync();
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') runSync();
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const runBackgroundBackup = async () => {
+      try {
+        if (!(await isDriveSignedIn())) return;
+        const repos = await getRepos();
+        await backupIfChanged(repos);
+      } catch {
+        // non-fatal: Settings shows last successful backup time (Task 12)
+      }
+    };
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'inactive') {
+        void runBackgroundBackup();
+      }
     });
     return () => subscription.remove();
   }, []);
