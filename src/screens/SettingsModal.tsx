@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { backupIfChanged, driveSignIn, driveSignOut, isDriveSignedIn } from '../api/drive';
 import { Field } from '../components/Field';
 import { ModalShell } from '../components/ModalShell';
 import { getRepos } from '../db';
 import { requestHealthPermissions, syncExercise } from '../health/healthConnect';
+import { dumpAll } from '../lib/backup';
 import { colors, fonts } from '../theme';
 
 type SettingsErrors = Partial<Record<'kcalTarget' | 'protein' | 'carbs' | 'fat', string>>;
@@ -30,6 +34,10 @@ export function SettingsModal({
   const [lastHcSyncMs, setLastHcSyncMs] = useState(0);
   const [hcStatus, setHcStatus] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [driveSignedIn, setDriveSignedIn] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState<number | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -47,6 +55,7 @@ export function SettingsModal({
         setCarbs(String(s.carbsTargetG));
         setFat(String(s.fatTargetG));
         setLastHcSyncMs(s.lastHcSyncMs);
+        setLastBackupAt(s.lastBackupAt);
       })
       .catch(() => {
         if (active) setFormError('Could not load settings. Close and try again.');
@@ -54,6 +63,9 @@ export function SettingsModal({
       .finally(() => {
         if (active) setLoading(false);
       });
+    isDriveSignedIn().then((signedIn) => {
+      if (active) setDriveSignedIn(signedIn);
+    });
 
     return () => {
       active = false;
@@ -95,6 +107,49 @@ export function SettingsModal({
       setHcStatus('Sync failed. Manual and chat logging still work.');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleDriveSignIn = async () => {
+    setBackupError(null);
+    try {
+      await driveSignIn();
+      setDriveSignedIn(true);
+    } catch {
+      setBackupError('Google sign-in failed. Try again.');
+    }
+  };
+
+  const handleDriveSignOut = async () => {
+    await driveSignOut();
+    setDriveSignedIn(false);
+  };
+
+  const handleBackupNow = async () => {
+    setBackupBusy(true);
+    setBackupError(null);
+    try {
+      const repos = await getRepos();
+      await backupIfChanged(repos);
+      const fresh = await repos.settings.getAll();
+      setLastBackupAt(fresh.lastBackupAt);
+    } catch {
+      setBackupError('Backup failed. Will retry automatically.');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setBackupError(null);
+    try {
+      const repos = await getRepos();
+      const dump = await dumpAll(repos);
+      const path = `${FileSystem.cacheDirectory}kcalc-export-${Date.now()}.json`;
+      await FileSystem.writeAsStringAsync(path, JSON.stringify(dump, null, 2));
+      await Sharing.shareAsync(path, { mimeType: 'application/json' });
+    } catch {
+      setBackupError('Export failed. Try again.');
     }
   };
 
@@ -160,6 +215,26 @@ export function SettingsModal({
       <Pressable accessibilityLabel="Sync Health Connect now" accessibilityRole="button" style={styles.hcButton} disabled={syncing} onPress={syncNow}>
         <Text style={styles.hcButtonText}>{syncing ? 'SYNCING' : 'SYNC NOW'}</Text>
       </Pressable>
+      <Text style={styles.section}>BACKUP</Text>
+      {backupError && <Text style={styles.formError}>{backupError}</Text>}
+      <Text style={styles.status}>
+        {driveSignedIn
+          ? lastBackupAt
+            ? `Last backup: ${new Date(lastBackupAt).toLocaleString()}`
+            : 'Signed in. No backup yet.'
+          : 'Not signed in to Google Drive.'}
+      </Text>
+      <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={driveSignedIn ? handleDriveSignOut : handleDriveSignIn}>
+        <Text style={styles.secondaryButtonText}>{driveSignedIn ? 'SIGN OUT' : 'SIGN IN TO GOOGLE DRIVE'}</Text>
+      </Pressable>
+      {driveSignedIn && (
+        <Pressable accessibilityRole="button" disabled={backupBusy} style={styles.secondaryButton} onPress={handleBackupNow}>
+          <Text style={styles.secondaryButtonText}>{backupBusy ? 'BACKING UP…' : 'BACK UP NOW'}</Text>
+        </Pressable>
+      )}
+      <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={handleExport}>
+        <Text style={styles.secondaryButtonText}>EXPORT DATA (JSON)</Text>
+      </Pressable>
     </ModalShell>
   );
 }
@@ -184,4 +259,6 @@ const styles = StyleSheet.create({
   section: { fontFamily: fonts.bodySemi, fontSize: 11, letterSpacing: 2, color: colors.muted, marginTop: 8, marginBottom: 8 },
   hcButton: { backgroundColor: colors.surface, borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 4 },
   hcButtonText: { fontFamily: fonts.condensed, fontSize: 14, color: colors.fg, letterSpacing: 2 },
+  secondaryButton: { padding: 12, borderRadius: 8, backgroundColor: colors.surface, alignItems: 'center', marginBottom: 8 },
+  secondaryButtonText: { fontFamily: fonts.condensed, fontSize: 13, color: colors.fg, letterSpacing: 1.5 },
 });
