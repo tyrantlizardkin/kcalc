@@ -55,3 +55,11 @@ test('byHcRecordId finds an existing health-connect row and returns null otherwi
   expect(found?.activity).toBe('ride');
   expect(await exercise.byHcRecordId('missing')).toBeNull();
 });
+
+test('all returns every exercise entry ordered by date then id', async () => {
+  const { exercise } = await setup();
+  await exercise.insert({ date: '2026-07-02', activity: 'Run', kcalBurned: 300, source: 'manual', hcRecordId: null });
+  await exercise.insert({ date: '2026-07-01', activity: 'Walk', kcalBurned: 150, source: 'manual', hcRecordId: null });
+  const all = await exercise.all();
+  expect(all.map((e) => e.activity)).toEqual(['Walk', 'Run']);
+});

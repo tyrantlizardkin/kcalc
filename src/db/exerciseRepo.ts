@@ -56,6 +56,10 @@ export function makeExerciseRepo(db: SqlDb) {
       const row = await db.getFirstAsync<ExerciseRow>(`SELECT ${COLS} FROM exercise WHERE hc_record_id = ?`, hcRecordId);
       return row ? rowToExercise(row) : null;
     },
+    async all(): Promise<ExerciseEntry[]> {
+      const rows = await db.getAllAsync<ExerciseRow>(`SELECT ${COLS} FROM exercise ORDER BY date ASC, created_at ASC, id ASC`);
+      return rows.map(rowToExercise);
+    },
   };
 }
 
