@@ -139,17 +139,26 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   async update_entry(args, repos, date) {
     const kind = args.kind as string;
     const patch = (args.patch as Record<string, unknown>) ?? {};
-    if (kind === 'meal') {
-      await repos.meals.update(args.id as number, patch);
-      return { ok: true };
-    }
-    if (kind === 'exercise') {
-      await repos.exercise.update(args.id as number, patch);
+    if (kind === 'meal' || kind === 'exercise') {
+      if (typeof args.id !== 'number') {
+        throw new Error('update_entry requires a numeric id for kind meal/exercise');
+      }
+      if (kind === 'meal') {
+        await repos.meals.update(args.id, patch);
+      } else {
+        await repos.exercise.update(args.id, patch);
+      }
       return { ok: true };
     }
     if (kind === 'weight') {
       const targetDate = (args.date as string | undefined) ?? date;
-      await repos.weights.upsert(targetDate, patch.lbs as number, (patch.flag as string | undefined) ?? null);
+      const existing = await repos.weights.byDate(targetDate);
+      const lbs = (patch.lbs as number | undefined) ?? existing?.lbs;
+      if (lbs === undefined) {
+        throw new Error('update_entry: no existing weight entry and no lbs provided in patch');
+      }
+      const flag = (patch.flag as string | undefined) ?? existing?.flag ?? null;
+      await repos.weights.upsert(targetDate, lbs, flag);
       return { ok: true };
     }
     throw new Error(`Unknown update_entry kind: ${kind}`);

@@ -75,6 +75,25 @@ test('update_entry upserts a weight for kind weight', async () => {
   expect(w?.lbs).toBe(179.5);
 });
 
+test('update_entry patches an exercise entry by id', async () => {
+  const repos = await makeRepos();
+  const id = await repos.exercise.insert({
+    date: '2026-07-06', activity: 'Walk', kcalBurned: 150, source: 'manual', hcRecordId: null,
+  });
+  await TOOL_HANDLERS.update_entry({ kind: 'exercise', id, patch: { kcalBurned: 200 } }, repos, '2026-07-06');
+  const exercise = await repos.exercise.listByDate('2026-07-06');
+  expect(exercise[0].kcalBurned).toBe(200);
+});
+
+test('update_entry weight patch preserves existing lbs when patch omits it', async () => {
+  const repos = await makeRepos();
+  await repos.weights.upsert('2026-07-06', 180, null);
+  await TOOL_HANDLERS.update_entry({ kind: 'weight', patch: { flag: 'outlier' } }, repos, '2026-07-06');
+  const w = await repos.weights.byDate('2026-07-06');
+  expect(w?.lbs).toBe(180);
+  expect(w?.flag).toBe('outlier');
+});
+
 test('query_log returns meals, exercise, and weight for the date', async () => {
   const repos = await makeRepos();
   await repos.meals.insert({ date: '2026-07-06', name: 'Toast', detail: '', kcal: 100, proteinG: 3, carbsG: 20, fatG: 1, flags: [], source: 'manual', photoUri: null });
