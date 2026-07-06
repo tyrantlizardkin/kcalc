@@ -94,3 +94,4 @@ Some plans may mention Superpowers skills such as `superpowers:subagent-driven-d
 - Defaults: 1500 net kcal, 150g protein, 110g carbs, 50g fat, 200cm, age 42, male.
 - Daily net: meal kcal minus exercise kcal.
 - Weight deltas: most recent prior entry, not calendar yesterday; 7-day comparison uses latest entry with date <= date minus 7.
+- Exercise sync: Health Connect (`src/health/healthConnect.ts`) reads `ExerciseSession` + `ActiveCaloriesBurned` (written by RunKeeper Go), syncs on app foreground and manual "Sync now" (Today gear row + Settings), dedupes by session id, falls back to MET-formula estimate (`src/lib/metCalc.ts`) when no device calorie figure is present. Non-fatal on permission denial or sync failure; last-sync time shown in Settings.
