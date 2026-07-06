@@ -24,9 +24,14 @@ function makeRepos(db: SqlDb) {
 let reposPromise: Promise<Repos> | null = null;
 
 export async function getRepos(): Promise<Repos> {
-  reposPromise ??= SQLite.openDatabaseAsync('kcalc.db').then(async (db) => {
-    await migrate(db);
-    return makeRepos(db);
-  });
+  reposPromise ??= SQLite.openDatabaseAsync('kcalc.db')
+    .then(async (db) => {
+      await migrate(db);
+      return makeRepos(db);
+    })
+    .catch((error: unknown) => {
+      reposPromise = null;
+      throw error;
+    });
   return reposPromise;
 }

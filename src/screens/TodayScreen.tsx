@@ -39,14 +39,14 @@ export function TodayScreen({
   const load = useCallback(async () => {
     const repos = await getRepos();
     const date = todayIso();
-    const [meals, totals, burned, settings, weights] = await Promise.all([
+    const [meals, totals, burned, settings, weights, latest] = await Promise.all([
       repos.meals.listByDate(date),
       repos.meals.totalsByDate(date),
       repos.exercise.burnByDate(date),
       repos.settings.getAll(),
       repos.weights.all(),
+      repos.weights.latest(),
     ]);
-    const latest = weights.length > 0 ? weights[weights.length - 1] : null;
     setData({
       date,
       meals,
@@ -81,7 +81,7 @@ export function TodayScreen({
         </View>
 
         <View style={styles.todayRow}>
-          <Pressable style={styles.gear} onPress={onOpenSettings}>
+          <Pressable accessibilityLabel="Open settings" accessibilityRole="button" style={styles.gear} onPress={onOpenSettings}>
             <Text style={styles.gearIcon}>*</Text>
           </Pressable>
           <Text style={styles.todayLabel}>TODAY</Text>
@@ -105,7 +105,7 @@ export function TodayScreen({
           {data.meals.length === 0 && <Text style={styles.empty}>Nothing logged yet.</Text>}
         </View>
 
-        <Pressable style={styles.logButton} onPress={onLogMeal}>
+        <Pressable accessibilityLabel="Log a meal" accessibilityRole="button" style={styles.logButton} onPress={onLogMeal}>
           <Text style={styles.logButtonText}>LOG A MEAL</Text>
         </Pressable>
       </ScrollView>

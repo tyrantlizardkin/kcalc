@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyboardTypeOptions, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardTypeOptions, ReturnKeyTypeOptions, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, fonts } from '../theme';
 
 export function Field({
@@ -7,22 +7,30 @@ export function Field({
   value,
   onChange,
   keyboardType = 'default',
+  returnKeyType = 'next',
+  error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   keyboardType?: KeyboardTypeOptions;
+  returnKeyType?: ReturnKeyTypeOptions;
+  error?: string;
 }) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={styles.input}
+        accessibilityLabel={label}
+        autoCapitalize="none"
+        returnKeyType={returnKeyType}
+        style={[styles.input, error && styles.inputError]}
         value={value}
         onChangeText={onChange}
         keyboardType={keyboardType}
         placeholderTextColor={colors.comment}
       />
+      {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
 }
@@ -41,4 +49,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  inputError: { borderColor: colors.red },
+  error: { color: colors.red, fontFamily: fonts.body, fontSize: 11, marginTop: 5 },
 });

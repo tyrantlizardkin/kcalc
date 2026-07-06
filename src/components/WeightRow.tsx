@@ -12,7 +12,7 @@ export function WeightRow({ latest, deltas, onAdd }: { latest: Weight | null; de
         <Text style={styles.value}>{latest ? `${latest.lbs.toFixed(1)} lb` : '--'}</Text>
         <Text style={styles.delta}>{formatDelta(deltas?.priorDelta)} prior - {formatDelta(deltas?.sevenDayDelta)} 7d</Text>
       </View>
-      <Pressable style={styles.add} onPress={onAdd}>
+      <Pressable accessibilityLabel="Add today weight" accessibilityRole="button" style={styles.add} onPress={onAdd}>
         <Text style={styles.addText}>+</Text>
       </Pressable>
     </View>

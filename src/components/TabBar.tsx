@@ -16,7 +16,14 @@ export function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: T
       {TABS.map((tab) => {
         const selected = tab.key === active;
         return (
-          <Pressable key={tab.key} style={styles.tab} onPress={() => onChange(tab.key)}>
+          <Pressable
+            key={tab.key}
+            accessibilityLabel={`${tab.label} tab`}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            style={styles.tab}
+            onPress={() => onChange(tab.key)}
+          >
             <Text style={[styles.label, selected && styles.active]}>{tab.label}</Text>
             <View style={[styles.dot, selected && styles.dotActive]} />
           </Pressable>
