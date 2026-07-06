@@ -3,12 +3,17 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-n
 import { WeightChart } from '../components/WeightChart';
 import { getRepos } from '../db';
 import { weightDeltas, WeightDeltas } from '../lib/deltas';
+import { addDays, todayIso } from '../lib/dates';
+import { daySummary } from '../lib/netCalc';
 import { colors, fonts } from '../theme';
 import { Weight } from '../types';
+
+type NetDay = { date: string; netKcal: number; targetKcal: number };
 
 type TrendsData = {
   weights: Weight[];
   deltas: WeightDeltas | null;
+  netDays: NetDay[];
 };
 
 export function TrendsScreen({ reloadKey }: { reloadKey: number }) {
@@ -19,9 +24,20 @@ export function TrendsScreen({ reloadKey }: { reloadKey: number }) {
     const repos = await getRepos();
     const weights = await repos.weights.all();
     const latest = weights[weights.length - 1] ?? null;
+    const settings = await repos.settings.getAll();
+    const today = todayIso();
+    const dates = Array.from({ length: 14 }, (_, i) => addDays(today, -13 + i));
+    const netDays = await Promise.all(
+      dates.map(async (date) => {
+        const [totals, burned] = await Promise.all([repos.meals.totalsByDate(date), repos.exercise.burnByDate(date)]);
+        const summary = daySummary(totals.kcal, burned, settings.kcalTarget);
+        return { date, netKcal: summary.netKcal, targetKcal: settings.kcalTarget };
+      })
+    );
     setData({
       weights,
       deltas: latest ? weightDeltas(weights, latest.date) : null,
+      netDays,
     });
   }, []);
 
@@ -49,6 +65,18 @@ export function TrendsScreen({ reloadKey }: { reloadKey: number }) {
           </View>
         )}
         {data.deltas?.outlierInvolved && <Text style={styles.outlierNote}>⚠ outlier entry involved in one of these deltas</Text>}
+        <Text style={[styles.section, { marginTop: 20 }]}>NET KCAL — LAST 14 DAYS</Text>
+        <View style={styles.barRow}>
+          {data.netDays.map((day) => {
+            const ratio = day.targetKcal <= 0 ? 0 : Math.min(1.4, Math.max(0, day.netKcal / day.targetKcal));
+            const over = day.netKcal > day.targetKcal;
+            return (
+              <View key={day.date} style={styles.barCol}>
+                <View style={[styles.bar, { height: 60 * ratio, backgroundColor: over ? colors.red : colors.green }]} />
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
     </View>
   );
@@ -75,4 +103,7 @@ const styles = StyleSheet.create({
   deltaValue: { fontFamily: fonts.condensedBlack, fontSize: 20, color: colors.fg },
   deltaDate: { fontFamily: fonts.body, fontSize: 11, color: colors.comment, marginTop: 2 },
   outlierNote: { fontFamily: fonts.body, fontSize: 12, color: colors.orange, marginTop: 10 },
+  barRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 60, marginTop: 8 },
+  barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: 60 },
+  bar: { width: '100%', borderRadius: 3, minHeight: 2 },
 });
