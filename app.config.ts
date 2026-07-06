@@ -25,6 +25,7 @@ const config: ExpoConfig = {
     geminiApiKey: process.env.GEMINI_API_KEY ?? '',
   },
   owner: 'jpcarlson',
+  plugins: ['react-native-health-connect'],
 };
 
 export default config;
