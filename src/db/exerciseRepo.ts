@@ -27,6 +27,20 @@ export function makeExerciseRepo(db: SqlDb) {
       );
       return result.lastInsertRowId;
     },
+    async update(id: number, patch: Partial<NewExercise>): Promise<void> {
+      const row = await db.getFirstAsync<ExerciseRow>(`SELECT ${COLS} FROM exercise WHERE id = ?`, id);
+      if (!row) throw new Error(`Exercise entry ${id} not found`);
+      const merged: NewExercise = { ...rowToExercise(row), ...patch };
+      await db.runAsync(
+        `UPDATE exercise SET date = ?, activity = ?, kcal_burned = ?, source = ?, hc_record_id = ? WHERE id = ?`,
+        merged.date,
+        merged.activity,
+        merged.kcalBurned,
+        merged.source,
+        merged.hcRecordId,
+        id
+      );
+    },
     async listByDate(date: string): Promise<ExerciseEntry[]> {
       const rows = await db.getAllAsync<ExerciseRow>(`SELECT ${COLS} FROM exercise WHERE date = ? ORDER BY created_at ASC, id ASC`, date);
       return rows.map(rowToExercise);

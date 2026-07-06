@@ -30,6 +30,25 @@ export function makeMealsRepo(db: SqlDb) {
       );
       return result.lastInsertRowId;
     },
+    async update(id: number, patch: Partial<NewMeal>): Promise<void> {
+      const row = await db.getFirstAsync<MealRow>(`SELECT ${COLS} FROM meals WHERE id = ?`, id);
+      if (!row) throw new Error(`Meal ${id} not found`);
+      const merged: NewMeal = { ...rowToMeal(row), ...patch };
+      await db.runAsync(
+        `UPDATE meals SET date = ?, name = ?, detail = ?, kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?, flags = ?, source = ?, photo_uri = ? WHERE id = ?`,
+        merged.date,
+        merged.name,
+        merged.detail,
+        merged.kcal,
+        merged.proteinG,
+        merged.carbsG,
+        merged.fatG,
+        JSON.stringify(merged.flags),
+        merged.source,
+        merged.photoUri,
+        id
+      );
+    },
     async listByDate(date: string): Promise<Meal[]> {
       const rows = await db.getAllAsync<MealRow>(`SELECT ${COLS} FROM meals WHERE date = ? ORDER BY created_at ASC, id ASC`, date);
       return rows.map(rowToMeal);

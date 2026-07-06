@@ -25,3 +25,25 @@ test('chat stores per-day messages in insertion order', async () => {
   await chat.add('2026-07-04', 'user', 'old');
   expect((await chat.listByDate('2026-07-05')).map((m) => m.content)).toEqual(['log chicken', 'logged']);
 });
+
+test('update patches only the given fields', async () => {
+  const { exercise } = await setup();
+  const id = await exercise.insert({
+    date: '2026-07-06',
+    activity: 'Run',
+    kcalBurned: 200,
+    source: 'chat',
+    hcRecordId: null,
+  });
+
+  await exercise.update(id, { kcalBurned: 250 });
+
+  const [updated] = await exercise.listByDate('2026-07-06');
+  expect(updated.kcalBurned).toBe(250);
+  expect(updated.activity).toBe('Run');
+});
+
+test('update throws for an unknown id', async () => {
+  const { exercise } = await setup();
+  await expect(exercise.update(999, { kcalBurned: 1 })).rejects.toThrow();
+});
