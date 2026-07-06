@@ -1,10 +1,10 @@
 import { generateContent } from '../src/api/gemini';
 
-function fakeFetch(body: unknown, ok = true): typeof fetch {
+function fakeFetch(body: unknown, ok = true, status: number = ok ? 200 : 429): typeof fetch {
   return (async () =>
     ({
       ok,
-      status: ok ? 200 : 429,
+      status,
       json: async () => body,
     }) as Response) as unknown as typeof fetch;
 }
@@ -36,4 +36,17 @@ test('throws a RateLimitError on 429', async () => {
   await expect(
     generateContent({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }, fetchImpl)
   ).rejects.toThrow('rate limit');
+});
+
+test('throws error on non-ok response with status 400', async () => {
+  const fetchImpl = fakeFetch({ error: { message: 'bad request' } }, false, 400);
+  await expect(
+    generateContent({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }, fetchImpl)
+  ).rejects.toThrow('Gemini request failed (400)');
+});
+
+test('returns null text and empty functionCalls for empty candidates', async () => {
+  const fetchImpl = fakeFetch({ candidates: [] });
+  const result = await generateContent({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }, fetchImpl);
+  expect(result).toEqual({ text: null, functionCalls: [] });
 });
