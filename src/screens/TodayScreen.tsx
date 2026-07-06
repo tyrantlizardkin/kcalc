@@ -35,32 +35,49 @@ export function TodayScreen({
   reloadKey: number;
 }) {
   const [data, setData] = useState<TodayData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const repos = await getRepos();
-    const date = todayIso();
-    const [meals, totals, burned, settings, weights, latest] = await Promise.all([
-      repos.meals.listByDate(date),
-      repos.meals.totalsByDate(date),
-      repos.exercise.burnByDate(date),
-      repos.settings.getAll(),
-      repos.weights.all(),
-      repos.weights.latest(),
-    ]);
-    setData({
-      date,
-      meals,
-      totals,
-      settings,
-      latest,
-      deltas: latest ? weightDeltas(weights, latest.date) : null,
-      summary: daySummary(totals.kcal, burned, settings.kcalTarget),
-    });
+    try {
+      setError(null);
+      const repos = await getRepos();
+      const date = todayIso();
+      const [meals, totals, burned, settings, weights, latest] = await Promise.all([
+        repos.meals.listByDate(date),
+        repos.meals.totalsByDate(date),
+        repos.exercise.burnByDate(date),
+        repos.settings.getAll(),
+        repos.weights.all(),
+        repos.weights.latest(),
+      ]);
+      setData({
+        date,
+        meals,
+        totals,
+        settings,
+        latest,
+        deltas: latest ? weightDeltas(weights, latest.date) : null,
+        summary: daySummary(totals.kcal, burned, settings.kcalTarget),
+      });
+    } catch {
+      setError('Could not load today. Try again.');
+    }
   }, []);
 
   useEffect(() => {
     load();
   }, [load, reloadKey]);
+
+  if (error) {
+    return (
+      <View style={styles.errorRoot}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Pressable accessibilityLabel="Retry" accessibilityRole="button" style={styles.retryButton} onPress={load}>
+          <Text style={styles.retryButtonText}>RETRY</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (!data) return <View style={styles.root} />;
 
@@ -115,6 +132,10 @@ export function TodayScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  errorRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, backgroundColor: colors.bg },
+  errorText: { color: colors.fg, fontFamily: fonts.body, fontSize: 14, textAlign: 'center' },
+  retryButton: { backgroundColor: 'rgba(80,250,123,0.12)', borderWidth: 1, borderColor: 'rgba(80,250,123,0.3)', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 12 },
+  retryButtonText: { fontFamily: fonts.condensed, fontSize: 15, color: colors.green, letterSpacing: 2 },
   scroll: { padding: 18, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 26 },
   logo: { fontFamily: fonts.condensedBlack, fontSize: 24, color: colors.fg },
