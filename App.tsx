@@ -8,6 +8,7 @@ import { colors } from './src/theme';
 import { Placeholder } from './src/screens/Placeholder';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { CaptureScreen } from './src/screens/CaptureScreen';
+import { ConfirmMealScreen } from './src/screens/ConfirmMealScreen';
 import { ManualMealModal } from './src/screens/ManualMealModal';
 import { WeightModal } from './src/screens/WeightModal';
 import { SettingsModal } from './src/screens/SettingsModal';
@@ -17,6 +18,7 @@ export default function App() {
   const [reloadKey, setReloadKey] = useState(0);
   const [mealOpen, setMealOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<{ base64: string; uri: string } | null>(null);
   const [weightOpen, setWeightOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fontsLoaded] = useFonts({
@@ -42,13 +44,28 @@ export default function App() {
     <SafeAreaView style={styles.root}>
       <StatusBar style="light" />
       <View style={styles.content}>
-        {tab === 'today' && captureOpen && (
+        {tab === 'today' && captureOpen && !capturedPhoto && (
           <CaptureScreen
-            onCaptured={() => setCaptureOpen(false)}
+            onCaptured={(base64, uri) => setCapturedPhoto({ base64, uri })}
             onCancel={() => setCaptureOpen(false)}
           />
         )}
-        {tab === 'today' && !captureOpen && (
+        {tab === 'today' && capturedPhoto && (
+          <ConfirmMealScreen
+            photoBase64={capturedPhoto.base64}
+            photoUri={capturedPhoto.uri}
+            onSaved={() => {
+              setCapturedPhoto(null);
+              setCaptureOpen(false);
+              bumpReload();
+            }}
+            onCancel={() => {
+              setCapturedPhoto(null);
+              setCaptureOpen(false);
+            }}
+          />
+        )}
+        {tab === 'today' && !captureOpen && !capturedPhoto && (
           <TodayScreen
             onLogMealPhoto={() => setCaptureOpen(true)}
             onLogMealManual={() => setMealOpen(true)}
