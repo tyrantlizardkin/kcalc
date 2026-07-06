@@ -1,3 +1,5 @@
+import { NewSflItem } from '../types';
+
 export type ParsedWeightEntry = { date: string; lbs: number };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,4 +25,24 @@ export function parseWeightLog(markdown: string): ParsedWeightEntry[] {
     entries.push({ date: dateCell, lbs });
   }
   return entries;
+}
+
+export function parseSflMarkdown(markdown: string): NewSflItem[] {
+  const items: NewSflItem[] = [];
+  for (const line of markdown.split('\n')) {
+    const cells = splitTableRow(line);
+    if (cells.length < 6) continue;
+    const [name, serving, kcalCell, proteinCell, carbsCell, fatCell, flagsCell] = cells;
+    const kcal = Number(kcalCell);
+    const proteinG = Number(proteinCell);
+    const carbsG = Number(carbsCell);
+    const fatG = Number(fatCell);
+    if (!name || ![kcal, proteinG, carbsG, fatG].every(Number.isFinite)) continue;
+    const flags = (flagsCell ?? '')
+      .split(',')
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
+    items.push({ name, serving: serving ?? '', kcal, proteinG, carbsG, fatG, flags });
+  }
+  return items;
 }
