@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { Field } from '../components/Field';
 import { ModalShell } from '../components/ModalShell';
 import { getRepos } from '../db';
+import { requestHealthPermissions, syncExercise } from '../health/healthConnect';
 import { colors, fonts } from '../theme';
 
 type SettingsErrors = Partial<Record<'kcalTarget' | 'protein' | 'carbs' | 'fat', string>>;
@@ -26,6 +27,9 @@ export function SettingsModal({
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [lastHcSyncMs, setLastHcSyncMs] = useState(0);
+  const [hcStatus, setHcStatus] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -42,6 +46,7 @@ export function SettingsModal({
         setProtein(String(s.proteinTargetG));
         setCarbs(String(s.carbsTargetG));
         setFat(String(s.fatTargetG));
+        setLastHcSyncMs(s.lastHcSyncMs);
       })
       .catch(() => {
         if (active) setFormError('Could not load settings. Close and try again.');
@@ -70,6 +75,26 @@ export function SettingsModal({
       setFormError('Could not save settings. Try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const syncNow = async () => {
+    setSyncing(true);
+    setHcStatus(null);
+    try {
+      const granted = await requestHealthPermissions();
+      if (!granted) {
+        setHcStatus('Health Connect permission not granted.');
+        return;
+      }
+      const repos = await getRepos();
+      const result = await syncExercise(repos);
+      setLastHcSyncMs(Date.now());
+      setHcStatus(`Synced ${result.inserted + result.updated} entr${result.inserted + result.updated === 1 ? 'y' : 'ies'}.`);
+    } catch {
+      setHcStatus('Sync failed. Manual and chat logging still work.');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -127,6 +152,14 @@ export function SettingsModal({
       >
         <Text style={styles.importButtonText}>IMPORT DATA</Text>
       </Pressable>
+      <Text style={styles.section}>HEALTH CONNECT</Text>
+      <Text style={styles.status}>
+        {lastHcSyncMs > 0 ? `Last synced ${new Date(lastHcSyncMs).toLocaleString()}` : 'Never synced'}
+      </Text>
+      {hcStatus && <Text style={styles.formError}>{hcStatus}</Text>}
+      <Pressable accessibilityLabel="Sync Health Connect now" accessibilityRole="button" style={styles.hcButton} disabled={syncing} onPress={syncNow}>
+        <Text style={styles.hcButtonText}>{syncing ? 'SYNCING' : 'SYNC NOW'}</Text>
+      </Pressable>
     </ModalShell>
   );
 }
@@ -148,4 +181,7 @@ const styles = StyleSheet.create({
   formError: { color: colors.red, fontFamily: fonts.body, fontSize: 13, marginBottom: 12 },
   importButton: { marginTop: 16, backgroundColor: colors.surface, borderRadius: 8, padding: 14, alignItems: 'center' },
   importButtonText: { fontFamily: fonts.condensed, fontSize: 14, color: colors.muted, letterSpacing: 2 },
+  section: { fontFamily: fonts.bodySemi, fontSize: 11, letterSpacing: 2, color: colors.muted, marginTop: 8, marginBottom: 8 },
+  hcButton: { backgroundColor: colors.surface, borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 4 },
+  hcButtonText: { fontFamily: fonts.condensed, fontSize: 14, color: colors.fg, letterSpacing: 2 },
 });
