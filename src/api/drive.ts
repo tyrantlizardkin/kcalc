@@ -31,8 +31,9 @@ async function getAccessToken(): Promise<string> {
   return tokens.accessToken;
 }
 
-import { dumpAll, hashDump } from '../lib/backup';
+import { dumpAll, hashDump, restoreDump } from '../lib/backup';
 import { Repos } from '../db';
+import { SqlDb } from '../db/sqlDb';
 
 const UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
 const FILES_URL = 'https://www.googleapis.com/drive/v3/files';
@@ -78,10 +79,23 @@ async function pruneOldVersions(token: string): Promise<void> {
   }
 }
 
-async function listBackupFiles(token: string): Promise<DriveBackupFile[]> {
+export async function listBackupFiles(token: string): Promise<DriveBackupFile[]> {
   const url = `${FILES_URL}?spaces=appDataFolder&fields=files(id,name,createdTime)&orderBy=createdTime desc&pageSize=100`;
   const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!response.ok) throw new Error(`Drive list failed: ${response.status}`);
   const json = (await response.json()) as { files: DriveBackupFile[] };
   return json.files;
+}
+
+export async function listBackups(): Promise<DriveBackupFile[]> {
+  const token = await getAccessToken();
+  return listBackupFiles(token);
+}
+
+export async function restoreBackup(fileId: string, repos: Repos, db: SqlDb): Promise<void> {
+  const token = await getAccessToken();
+  const response = await fetch(`${FILES_URL}/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) throw new Error(`Drive download failed: ${response.status}`);
+  const dump = (await response.json()) as import('../lib/backup').BackupDump;
+  await restoreDump(dump, repos, db);
 }
