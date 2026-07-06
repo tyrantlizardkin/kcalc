@@ -31,3 +31,18 @@ test('lastHcSyncMs defaults to 0 and can be updated', async () => {
   await repo.set({ lastHcSyncMs: 1720000000000 });
   expect((await repo.getAll()).lastHcSyncMs).toBe(1720000000000);
 });
+
+test('defaults include null backup bookkeeping fields', async () => {
+  const repo = await setup();
+  const settings = await repo.getAll();
+  expect(settings.lastBackupHash).toBeNull();
+  expect(settings.lastBackupAt).toBeNull();
+});
+
+test('set persists backup bookkeeping fields', async () => {
+  const repo = await setup();
+  await repo.set({ lastBackupHash: 'abc123', lastBackupAt: 1720000000000 });
+  const settings = await repo.getAll();
+  expect(settings.lastBackupHash).toBe('abc123');
+  expect(settings.lastBackupAt).toBe(1720000000000);
+});

@@ -68,4 +68,6 @@ export type Settings = {
   age: number;
   sex: 'male' | 'female';
   lastHcSyncMs: number;
+  lastBackupHash: string | null;
+  lastBackupAt: number | null;
 };

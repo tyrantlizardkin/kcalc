@@ -10,6 +10,8 @@ export const DEFAULT_SETTINGS: Settings = {
   age: 42,
   sex: 'male',
   lastHcSyncMs: 0,
+  lastBackupHash: null,
+  lastBackupAt: null,
 };
 
 export function makeSettingsRepo(db: SqlDb) {
