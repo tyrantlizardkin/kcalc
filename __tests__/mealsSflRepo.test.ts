@@ -47,3 +47,31 @@ test('sfl upserts by unique name and sorts case-insensitively', async () => {
   expect((await sfl.byName('Yogurt'))?.serving).toBe('170 g');
   expect((await sfl.all()).map((i) => i.name)).toEqual(['apple', 'Yogurt']);
 });
+
+test('update patches only the given fields', async () => {
+  const { meals } = await setup();
+  const id = await meals.insert({
+    date: '2026-07-06',
+    name: 'Oats',
+    detail: '',
+    kcal: 300,
+    proteinG: 10,
+    carbsG: 50,
+    fatG: 5,
+    flags: [],
+    source: 'manual',
+    photoUri: null,
+  });
+
+  await meals.update(id, { kcal: 350, flags: ['gluten'] });
+
+  const [updated] = await meals.listByDate('2026-07-06');
+  expect(updated.kcal).toBe(350);
+  expect(updated.flags).toEqual(['gluten']);
+  expect(updated.name).toBe('Oats');
+});
+
+test('update throws for an unknown id', async () => {
+  const { meals } = await setup();
+  await expect(meals.update(999, { kcal: 1 })).rejects.toThrow();
+});

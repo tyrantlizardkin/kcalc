@@ -3,6 +3,9 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/__tests__'],
   testMatch: ['**/*.test.ts'],
+  moduleNameMapper: {
+    '^expo-constants$': '<rootDir>/__tests__/mocks/expoConstants.ts',
+  },
   transform: {
     '^.+\\.ts$': [
       'ts-jest',

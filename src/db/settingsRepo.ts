@@ -9,6 +9,9 @@ export const DEFAULT_SETTINGS: Settings = {
   heightCm: 200,
   age: 42,
   sex: 'male',
+  lastHcSyncMs: 0,
+  lastBackupHash: null,
+  lastBackupAt: null,
 };
 
 export function makeSettingsRepo(db: SqlDb) {
