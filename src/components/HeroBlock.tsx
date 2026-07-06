@@ -1,14 +1,22 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { DaySummary } from '../lib/netCalc';
 import { colors, fonts } from '../theme';
 
 export function HeroBlock({ summary, kcalTarget }: { summary: DaySummary; kcalTarget: number }) {
-  const pct = Math.round(summary.progress * 100);
+  const anim = useRef(new Animated.Value(summary.progress)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, { toValue: summary.progress, duration: 450, useNativeDriver: false }).start();
+  }, [summary.progress, anim]);
+
+  const opacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.24, 0.74] });
+  const barWidth = anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
   return (
     <View style={styles.wrap}>
       <View style={styles.ring}>
-        <View style={[styles.ringFill, { opacity: 0.24 + summary.progress * 0.5 }]} />
+        <Animated.View style={[styles.ringFill, { opacity }]} />
         <Text style={styles.kcal}>{summary.eatenKcal}</Text>
         <Text style={styles.kcalLabel}>KCAL EATEN</Text>
       </View>
@@ -16,7 +24,7 @@ export function HeroBlock({ summary, kcalTarget }: { summary: DaySummary; kcalTa
         net {summary.netKcal} / {kcalTarget} - {summary.remainingKcal} left
       </Text>
       <View style={styles.track}>
-        <View style={[styles.bar, { width: `${pct}%` }]} />
+        <Animated.View style={[styles.bar, { width: barWidth }]} />
       </View>
     </View>
   );
