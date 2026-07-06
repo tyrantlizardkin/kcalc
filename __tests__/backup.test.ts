@@ -72,6 +72,42 @@ test('hashDump ignores exportedAt so re-dumping unchanged data hashes identicall
   expect(a).toBe(b);
 });
 
+test('hashDump ignores bookkeeping settings fields (lastHcSyncMs, lastBackupHash, lastBackupAt) so re-uploading with no real changes hashes identically', async () => {
+  const a = await hashDump(
+    fixtureDump({
+      settings: {
+        kcalTarget: 1500, proteinTargetG: 150, carbsTargetG: 110, fatTargetG: 50,
+        heightCm: 200, age: 42, sex: 'male', lastHcSyncMs: 0, lastBackupHash: null, lastBackupAt: null,
+      },
+    }),
+    nodeSha256
+  );
+  const b = await hashDump(
+    fixtureDump({
+      settings: {
+        kcalTarget: 1500, proteinTargetG: 150, carbsTargetG: 110, fatTargetG: 50,
+        heightCm: 200, age: 42, sex: 'male', lastHcSyncMs: 1720003600000, lastBackupHash: 'some-prior-hash', lastBackupAt: 1720003600000,
+      },
+    }),
+    nodeSha256
+  );
+  expect(a).toBe(b);
+});
+
+test('hashDump still changes when real user-data settings fields change', async () => {
+  const a = await hashDump(fixtureDump(), nodeSha256);
+  const b = await hashDump(
+    fixtureDump({
+      settings: {
+        kcalTarget: 1600, proteinTargetG: 150, carbsTargetG: 110, fatTargetG: 50,
+        heightCm: 200, age: 42, sex: 'male', lastHcSyncMs: 0, lastBackupHash: null, lastBackupAt: null,
+      },
+    }),
+    nodeSha256
+  );
+  expect(a).not.toBe(b);
+});
+
 test('dumpAll pulls every table into one snapshot', async () => {
   const repos = await makeTestRepos();
   await repos.weights.upsert('2026-07-01', 180);

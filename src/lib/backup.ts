@@ -78,7 +78,12 @@ export async function hashDump(
   hashImpl: (input: string) => Promise<string> = defaultHashImpl
 ): Promise<string> {
   const { exportedAt: _exportedAt, ...stable } = dump;
-  return hashImpl(stableStringify(stable));
+  // Exclude mutable bookkeeping fields from settings so writing them back
+  // (e.g. after every HC sync or every backup upload) doesn't perturb the
+  // hash and defeat the backupIfChanged short-circuit.
+  const { lastHcSyncMs: _lastHcSyncMs, lastBackupHash: _lastBackupHash, lastBackupAt: _lastBackupAt, ...stableSettings } =
+    stable.settings;
+  return hashImpl(stableStringify({ ...stable, settings: stableSettings }));
 }
 
 export function stableStringify(value: unknown): string {
