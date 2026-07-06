@@ -1,5 +1,25 @@
 import { createHash } from 'crypto';
-import { stableStringify, hashDump, BackupDump } from '../src/lib/backup';
+import { stableStringify, hashDump, BackupDump, dumpAll } from '../src/lib/backup';
+import { makeTestDb } from './helpers/testDb';
+import { migrate } from '../src/db/schema';
+import { makeWeightsRepo } from '../src/db/weightsRepo';
+import { makeMealsRepo } from '../src/db/mealsRepo';
+import { makeExerciseRepo } from '../src/db/exerciseRepo';
+import { makeSflRepo } from '../src/db/sflRepo';
+import { makeSettingsRepo } from '../src/db/settingsRepo';
+
+async function makeTestRepos() {
+  const db = makeTestDb();
+  await migrate(db);
+  return {
+    weights: makeWeightsRepo(db),
+    meals: makeMealsRepo(db),
+    exercise: makeExerciseRepo(db),
+    sfl: makeSflRepo(db),
+    settings: makeSettingsRepo(db),
+    chat: { add: async () => 0, listByDate: async () => [] },
+  };
+}
 
 test('stableStringify produces identical output regardless of key insertion order', () => {
   const a = { b: 2, a: 1, nested: { y: 1, x: 2 } };
@@ -50,4 +70,21 @@ test('hashDump ignores exportedAt so re-dumping unchanged data hashes identicall
   const a = await hashDump(fixtureDump({ exportedAt: 1 }), nodeSha256);
   const b = await hashDump(fixtureDump({ exportedAt: 2 }), nodeSha256);
   expect(a).toBe(b);
+});
+
+test('dumpAll pulls every table into one snapshot', async () => {
+  const repos = await makeTestRepos();
+  await repos.weights.upsert('2026-07-01', 180);
+  await repos.meals.insert({ date: '2026-07-01', name: 'Eggs', detail: '', kcal: 300, proteinG: 20, carbsG: 2, fatG: 22, flags: [], source: 'manual', photoUri: null });
+  await repos.exercise.insert({ date: '2026-07-01', activity: 'Run', kcalBurned: 300, source: 'manual', hcRecordId: null });
+  await repos.sfl.upsert({ name: 'Chicken Breast', serving: '100g', kcal: 165, proteinG: 31, carbsG: 0, fatG: 3.6, flags: [] });
+
+  const dump = await dumpAll(repos as unknown as import('../src/db').Repos);
+
+  expect(dump.version).toBe(1);
+  expect(dump.weights).toHaveLength(1);
+  expect(dump.meals).toHaveLength(1);
+  expect(dump.exercise).toHaveLength(1);
+  expect(dump.sfl).toHaveLength(1);
+  expect(dump.settings.kcalTarget).toBe(1500);
 });

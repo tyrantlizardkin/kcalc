@@ -1,3 +1,4 @@
+import { Repos } from '../db';
 import { ExerciseEntry, Meal, Settings, SflItem, Weight } from '../types';
 
 export type BackupDump = {
@@ -9,6 +10,17 @@ export type BackupDump = {
   sfl: SflItem[];
   settings: Settings;
 };
+
+export async function dumpAll(repos: Repos): Promise<BackupDump> {
+  const [weights, meals, exercise, sfl, settings] = await Promise.all([
+    repos.weights.all(),
+    repos.meals.all(),
+    repos.exercise.all(),
+    repos.sfl.all(),
+    repos.settings.getAll(),
+  ]);
+  return { version: 1, exportedAt: Date.now(), weights, meals, exercise, sfl, settings };
+}
 
 async function defaultHashImpl(input: string): Promise<string> {
   const Crypto = await import('expo-crypto');
