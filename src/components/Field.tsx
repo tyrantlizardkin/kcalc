@@ -9,6 +9,8 @@ export function Field({
   keyboardType = 'default',
   returnKeyType = 'next',
   error,
+  multiline = false,
+  numberOfLines = 4,
 }: {
   label: string;
   value: string;
@@ -16,6 +18,8 @@ export function Field({
   keyboardType?: KeyboardTypeOptions;
   returnKeyType?: ReturnKeyTypeOptions;
   error?: string;
+  multiline?: boolean;
+  numberOfLines?: number;
 }) {
   return (
     <View style={styles.wrap}>
@@ -24,10 +28,12 @@ export function Field({
         accessibilityLabel={label}
         autoCapitalize="none"
         returnKeyType={returnKeyType}
-        style={[styles.input, error && styles.inputError]}
+        style={[styles.input, multiline && styles.inputMultiline, error && styles.inputError]}
         value={value}
         onChangeText={onChange}
         keyboardType={keyboardType}
+        multiline={multiline}
+        numberOfLines={multiline ? numberOfLines : undefined}
         placeholderTextColor={colors.comment}
       />
       {error && <Text style={styles.error}>{error}</Text>}
@@ -49,6 +55,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
   inputError: { borderColor: colors.red },
   error: { color: colors.red, fontFamily: fonts.body, fontSize: 11, marginTop: 5 },
 });

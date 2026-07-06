@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { Field } from '../components/Field';
 import { ModalShell } from '../components/ModalShell';
 import { getRepos } from '../db';
@@ -7,7 +7,17 @@ import { colors, fonts } from '../theme';
 
 type SettingsErrors = Partial<Record<'kcalTarget' | 'protein' | 'carbs' | 'fat', string>>;
 
-export function SettingsModal({ visible, onClose, onSaved }: { visible: boolean; onClose: () => void; onSaved: () => void }) {
+export function SettingsModal({
+  visible,
+  onClose,
+  onSaved,
+  onOpenImport,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  onOpenImport: () => void;
+}) {
   const [kcalTarget, setKcalTarget] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -106,6 +116,17 @@ export function SettingsModal({ visible, onClose, onSaved }: { visible: boolean;
       <Field label="PROTEIN TARGET (G)" value={protein} onChange={setProtein} keyboardType="numeric" error={errors.protein} />
       <Field label="CARBS TARGET (G)" value={carbs} onChange={setCarbs} keyboardType="numeric" error={errors.carbs} />
       <Field label="FAT TARGET (G)" value={fat} onChange={setFat} keyboardType="numeric" returnKeyType="done" error={errors.fat} />
+      <Pressable
+        accessibilityLabel="Import data"
+        accessibilityRole="button"
+        style={styles.importButton}
+        onPress={() => {
+          onClose();
+          onOpenImport();
+        }}
+      >
+        <Text style={styles.importButtonText}>IMPORT DATA</Text>
+      </Pressable>
     </ModalShell>
   );
 }
@@ -125,4 +146,6 @@ function parseNonnegative(value: string): number | null {
 const styles = StyleSheet.create({
   status: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, marginBottom: 12 },
   formError: { color: colors.red, fontFamily: fonts.body, fontSize: 13, marginBottom: 12 },
+  importButton: { marginTop: 16, backgroundColor: colors.surface, borderRadius: 8, padding: 14, alignItems: 'center' },
+  importButtonText: { fontFamily: fonts.condensed, fontSize: 14, color: colors.muted, letterSpacing: 2 },
 });
