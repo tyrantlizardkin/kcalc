@@ -7,6 +7,7 @@ import { TabBar, TabKey } from './src/components/TabBar';
 import { colors } from './src/theme';
 import { Placeholder } from './src/screens/Placeholder';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { ChatScreen } from './src/screens/ChatScreen';
 import { CaptureScreen } from './src/screens/CaptureScreen';
 import { ConfirmMealScreen } from './src/screens/ConfirmMealScreen';
 import { ManualMealModal } from './src/screens/ManualMealModal';
@@ -74,7 +75,7 @@ export default function App() {
             reloadKey={reloadKey}
           />
         )}
-        {tab === 'chat' && <Placeholder label="CHAT" />}
+        {tab === 'chat' && <ChatScreen />}
         {tab === 'trends' && <Placeholder label="TRENDS" />}
       </View>
       <TabBar active={tab} onChange={setTab} />
