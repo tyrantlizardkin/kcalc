@@ -54,17 +54,19 @@ test('buildContext reports no weight entries when there are none', async () => {
 
 test('buildContext computes real weight deltas using latest weight entry date', async () => {
   const repos = await makeRepos();
-  // Seed multiple weight entries: 7 days ago, 1 day ago, and today
-  await repos.weights.upsert('2026-06-29', 200, null);
+  // Seed weight entries: ~7 days ago, 2 days ago, and 1 day ago
+  // Turn date (2026-07-06) is later than the latest weight entry (2026-07-05)
+  // This tests that deltas use latest.date (2026-07-05), not the turn date (2026-07-06)
+  await repos.weights.upsert('2026-06-28', 200, null);
+  await repos.weights.upsert('2026-07-04', 199, null);
   await repos.weights.upsert('2026-07-05', 198, null);
-  await repos.weights.upsert('2026-07-06', 196, null);
 
   const { contextBlock } = await buildContext(repos, '2026-07-06');
 
-  // Should compute deltas using latest entry (2026-07-06 @ 196 lbs)
-  // priorDelta: 196 - 198 = -2.0 lbs
-  // sevenDayDelta: 196 - 200 = -4.0 lbs
-  expect(contextBlock).toContain('WEIGHT: latest delta -2 lbs vs prior, -4 lbs vs 7 days ago.');
+  // Should compute deltas using latest entry (2026-07-05 @ 198 lbs)
+  // priorDelta: 198 - 199 = -1.0 lbs
+  // sevenDayDelta: 198 - 200 = -2.0 lbs
+  expect(contextBlock).toContain('WEIGHT: latest delta -1 lbs vs prior, -2 lbs vs 7 days ago.');
 });
 
 test('buildContext includes TODAY\'S FLAGS with meal sensitivity flags', async () => {
@@ -87,4 +89,62 @@ test('buildContext includes TODAY\'S FLAGS with meal sensitivity flags', async (
   const { contextBlock } = await buildContext(repos, '2026-07-06');
 
   expect(contextBlock).toContain("TODAY'S FLAGS: gluten.");
+});
+
+test('buildContext includes LAST 7 DAYS with meals and exercise across multiple days', async () => {
+  const repos = await makeRepos();
+  // Seed meals across a few of the 7 days before 2026-07-06
+  // 4 days ago: 500 kcal meals
+  await repos.meals.insert({
+    date: '2026-07-02',
+    name: 'Breakfast',
+    detail: '',
+    kcal: 300,
+    proteinG: 20,
+    carbsG: 30,
+    fatG: 10,
+    flags: [],
+    source: 'manual',
+    photoUri: null,
+  });
+  await repos.meals.insert({
+    date: '2026-07-02',
+    name: 'Lunch',
+    detail: '',
+    kcal: 200,
+    proteinG: 15,
+    carbsG: 20,
+    fatG: 8,
+    flags: [],
+    source: 'manual',
+    photoUri: null,
+  });
+  // 2 days ago: 400 kcal meals + 100 kcal exercise
+  await repos.meals.insert({
+    date: '2026-07-04',
+    name: 'Dinner',
+    detail: '',
+    kcal: 400,
+    proteinG: 30,
+    carbsG: 40,
+    fatG: 15,
+    flags: [],
+    source: 'manual',
+    photoUri: null,
+  });
+  await repos.exercise.insert({
+    date: '2026-07-04',
+    activity: 'Running',
+    kcalBurned: 100,
+    source: 'manual',
+    hcRecordId: null,
+  });
+
+  const { contextBlock } = await buildContext(repos, '2026-07-06');
+
+  // Assert LAST 7 DAYS header is present
+  expect(contextBlock).toContain('LAST 7 DAYS:');
+  // Assert at least one correctly formatted day line
+  expect(contextBlock).toContain('2026-07-02: ate 500 kcal, burned 0 kcal, net 500 kcal');
+  expect(contextBlock).toContain('2026-07-04: ate 400 kcal, burned 100 kcal, net 300 kcal');
 });
