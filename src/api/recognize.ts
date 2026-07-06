@@ -57,6 +57,39 @@ Resolution priority: (1) packaging/label data visible in the photo, (2) a matchi
 Flag any of these autism-sensitivity triggers found in an item: gluten, casein, additives, high sugar, processed.
 Respond only with JSON matching the provided schema.`;
 
+function isRecognitionResult(value: unknown): value is RecognitionResult {
+  if (typeof value !== 'object' || value === null) return false;
+  const obj = value as Record<string, unknown>;
+
+  // Check items
+  if (!Array.isArray(obj.items)) return false;
+  for (const item of obj.items) {
+    if (typeof item !== 'object' || item === null) return false;
+    const i = item as Record<string, unknown>;
+    if (typeof i.name !== 'string') return false;
+    if (typeof i.qty !== 'string') return false;
+    if (typeof i.kcal !== 'number') return false;
+    if (typeof i.proteinG !== 'number') return false;
+    if (typeof i.carbsG !== 'number') return false;
+    if (typeof i.fatG !== 'number') return false;
+    if (!Array.isArray(i.flags)) return false;
+  }
+
+  // Check totals
+  if (typeof obj.totals !== 'object' || obj.totals === null) return false;
+  const totals = obj.totals as Record<string, unknown>;
+  if (typeof totals.kcal !== 'number') return false;
+  if (typeof totals.proteinG !== 'number') return false;
+  if (typeof totals.carbsG !== 'number') return false;
+  if (typeof totals.fatG !== 'number') return false;
+
+  // Check confidence and notes
+  if (typeof obj.confidence !== 'number') return false;
+  if (typeof obj.notes !== 'string') return false;
+
+  return true;
+}
+
 export async function recognizeMeal(
   photoBase64: string,
   sfl: SflItem[],
@@ -81,8 +114,15 @@ export async function recognizeMeal(
 
   if (!result.text) throw new Error('Gemini returned no recognition text');
   try {
-    return JSON.parse(result.text) as RecognitionResult;
-  } catch {
+    const parsed = JSON.parse(result.text);
+    if (!isRecognitionResult(parsed)) {
+      throw new Error('Gemini returned malformed recognition JSON');
+    }
+    return parsed;
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Gemini returned malformed recognition JSON') {
+      throw err;
+    }
     throw new Error('Gemini returned malformed recognition JSON');
   }
 }

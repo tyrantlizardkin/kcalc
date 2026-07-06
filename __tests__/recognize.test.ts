@@ -29,3 +29,14 @@ test('recognizeMeal throws on malformed JSON text', async () => {
   const generate = jest.fn().mockResolvedValue({ text: 'not json', functionCalls: [] });
   await expect(recognizeMeal('base64photo', sfl, { generate })).rejects.toThrow();
 });
+
+test('recognizeMeal throws on valid JSON with missing required field', async () => {
+  const malformed = {
+    items: [{ name: 'Oatmeal', qty: '1 cup', kcal: 150, proteinG: 5, carbsG: 27, fatG: 3, flags: [] }],
+    totals: { proteinG: 5, carbsG: 27, fatG: 3 }, // missing kcal
+    confidence: 0.9,
+    notes: 'Missing kcal in totals.',
+  };
+  const generate = jest.fn().mockResolvedValue({ text: JSON.stringify(malformed), functionCalls: [] });
+  await expect(recognizeMeal('base64photo', sfl, { generate })).rejects.toThrow('Gemini returned malformed recognition JSON');
+});
