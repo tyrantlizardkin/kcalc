@@ -43,6 +43,42 @@ test('executes a function call, feeds the result back, and returns the final tex
   const w = await repos.weights.byDate('2026-07-06');
   expect(w?.lbs).toBe(180);
   expect(gemini.generateContent).toHaveBeenCalledTimes(2);
+
+  const secondCallContents = (gemini.generateContent as jest.Mock).mock.calls[1][0].contents;
+  const modelTurn = secondCallContents.find(
+    (c: { role: string; parts: unknown[] }) =>
+      c.role === 'model' && c.parts.some((p: any) => p.functionCall?.name === 'log_weight')
+  );
+  expect(modelTurn).toBeDefined();
+  expect(modelTurn.parts[0].functionCall).toEqual({ name: 'log_weight', args: { lbs: 180 } });
+
+  const responseTurn = secondCallContents.find(
+    (c: { role: string; parts: unknown[] }) =>
+      c.role === 'user' && c.parts.some((p: any) => p.functionResponse?.name === 'log_weight')
+  );
+  expect(responseTurn).toBeDefined();
+  expect(responseTurn.parts[0].functionResponse.name).toBe('log_weight');
+});
+
+test('gracefully handles an unknown/hallucinated function name without throwing', async () => {
+  jest
+    .spyOn(gemini, 'generateContent')
+    .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'nonexistent_function', args: {} }] })
+    .mockResolvedValueOnce({ text: 'Sorry, I could not do that.', functionCalls: [] });
+
+  const repos = await makeRepos();
+  const reply = await sendChatMessage('do something weird', '2026-07-06', repos);
+
+  expect(reply).toBe('Sorry, I could not do that.');
+  expect(gemini.generateContent).toHaveBeenCalledTimes(2);
+
+  const secondCallContents = (gemini.generateContent as jest.Mock).mock.calls[1][0].contents;
+  const responseTurn = secondCallContents.find(
+    (c: { role: string; parts: unknown[] }) =>
+      c.role === 'user' && c.parts.some((p: any) => p.functionResponse?.name === 'nonexistent_function')
+  );
+  expect(responseTurn).toBeDefined();
+  expect(responseTurn.parts[0].functionResponse.response.error).toMatch(/unknown function/i);
 });
 
 test('returns a fallback message after hitting the iteration cap', async () => {

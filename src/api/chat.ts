@@ -20,7 +20,11 @@ export async function sendChatMessage(userText: string, date: string, repos: Rep
 
     const responseParts: GeminiPart[] = await Promise.all(
       result.functionCalls.map(async (fc): Promise<GeminiPart> => {
-        const output = await TOOL_HANDLERS[fc.name](fc.args, repos, date);
+        const handler = TOOL_HANDLERS[fc.name];
+        if (!handler) {
+          return { functionResponse: { name: fc.name, response: { error: `Unknown function: ${fc.name}` } } };
+        }
+        const output = await handler(fc.args, repos, date);
         return { functionResponse: { name: fc.name, response: output } };
       })
     );
