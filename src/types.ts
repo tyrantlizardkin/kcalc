@@ -67,4 +67,5 @@ export type Settings = {
   heightCm: number;
   age: number;
   sex: 'male' | 'female';
+  lastHcSyncMs: number;
 };

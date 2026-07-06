@@ -47,3 +47,11 @@ test('update throws for an unknown id', async () => {
   const { exercise } = await setup();
   await expect(exercise.update(999, { kcalBurned: 1 })).rejects.toThrow();
 });
+
+test('byHcRecordId finds an existing health-connect row and returns null otherwise', async () => {
+  const { exercise } = await setup();
+  await exercise.insert({ date: '2026-07-05', activity: 'ride', kcalBurned: 300, source: 'healthconnect', hcRecordId: 'hc-1' });
+  const found = await exercise.byHcRecordId('hc-1');
+  expect(found?.activity).toBe('ride');
+  expect(await exercise.byHcRecordId('missing')).toBeNull();
+});

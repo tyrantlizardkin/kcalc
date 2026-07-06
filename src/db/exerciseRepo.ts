@@ -52,6 +52,10 @@ export function makeExerciseRepo(db: SqlDb) {
       );
       return row?.kcalBurned ?? 0;
     },
+    async byHcRecordId(hcRecordId: string): Promise<ExerciseEntry | null> {
+      const row = await db.getFirstAsync<ExerciseRow>(`SELECT ${COLS} FROM exercise WHERE hc_record_id = ?`, hcRecordId);
+      return row ? rowToExercise(row) : null;
+    },
   };
 }
 

@@ -24,3 +24,10 @@ test('set patches persist and merge over defaults', async () => {
   await repo.set({ kcalTarget: 1500 });
   expect((await repo.getAll()).kcalTarget).toBe(1500);
 });
+
+test('lastHcSyncMs defaults to 0 and can be updated', async () => {
+  const repo = await setup();
+  expect((await repo.getAll()).lastHcSyncMs).toBe(0);
+  await repo.set({ lastHcSyncMs: 1720000000000 });
+  expect((await repo.getAll()).lastHcSyncMs).toBe(1720000000000);
+});
