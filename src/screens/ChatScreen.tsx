@@ -31,7 +31,15 @@ export function ChatScreen() {
     try {
       const repos = await getRepos();
       await repos.chat.add(date, 'user', text);
-      const reply = await sendChatMessage(text, date, repos);
+      let reply: string;
+      try {
+        reply = await sendChatMessage(text, date, repos);
+      } catch (e) {
+        reply =
+          e instanceof Error && e.message.includes('rate limit')
+            ? 'Gemini rate limit hit — try again shortly.'
+            : 'Could not get a reply. Try again.';
+      }
       await repos.chat.add(date, 'model', reply);
       await load();
       scrollRef.current?.scrollToEnd({ animated: true });
