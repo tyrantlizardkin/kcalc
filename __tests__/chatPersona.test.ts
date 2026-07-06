@@ -51,3 +51,40 @@ test('buildContext reports no weight entries when there are none', async () => {
   const { contextBlock } = await buildContext(repos, '2026-07-06');
   expect(contextBlock).toContain('WEIGHT: no entries yet.');
 });
+
+test('buildContext computes real weight deltas using latest weight entry date', async () => {
+  const repos = await makeRepos();
+  // Seed multiple weight entries: 7 days ago, 1 day ago, and today
+  await repos.weights.upsert('2026-06-29', 200, null);
+  await repos.weights.upsert('2026-07-05', 198, null);
+  await repos.weights.upsert('2026-07-06', 196, null);
+
+  const { contextBlock } = await buildContext(repos, '2026-07-06');
+
+  // Should compute deltas using latest entry (2026-07-06 @ 196 lbs)
+  // priorDelta: 196 - 198 = -2.0 lbs
+  // sevenDayDelta: 196 - 200 = -4.0 lbs
+  expect(contextBlock).toContain('WEIGHT: latest delta -2 lbs vs prior, -4 lbs vs 7 days ago.');
+});
+
+test('buildContext includes TODAY\'S FLAGS with meal sensitivity flags', async () => {
+  const repos = await makeRepos();
+  await repos.weights.upsert('2026-07-06', 196, null);
+  // Seed a meal with gluten flag
+  await repos.meals.insert({
+    date: '2026-07-06',
+    name: 'Bread with butter',
+    detail: '',
+    kcal: 300,
+    proteinG: 10,
+    carbsG: 40,
+    fatG: 12,
+    flags: ['gluten'],
+    source: 'manual',
+    photoUri: null,
+  });
+
+  const { contextBlock } = await buildContext(repos, '2026-07-06');
+
+  expect(contextBlock).toContain("TODAY'S FLAGS: gluten.");
+});

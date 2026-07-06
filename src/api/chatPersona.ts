@@ -37,7 +37,8 @@ export async function buildContext(repos: Repos, date: string): Promise<ChatCont
   ]);
 
   const summary = daySummary(totals.kcal, burned, settings.kcalTarget);
-  const deltas = weightDeltas(weights, date);
+  const latest = weights.length > 0 ? weights[weights.length - 1] : null;
+  const deltas = latest ? weightDeltas(weights, latest.date) : null;
   const flags = dayFlags(todayMeals);
 
   const last7 = await Promise.all(
