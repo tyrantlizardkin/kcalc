@@ -7,6 +7,7 @@ import { TabBar, TabKey } from './src/components/TabBar';
 import { colors } from './src/theme';
 import { Placeholder } from './src/screens/Placeholder';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { CaptureScreen } from './src/screens/CaptureScreen';
 import { ManualMealModal } from './src/screens/ManualMealModal';
 import { WeightModal } from './src/screens/WeightModal';
 import { SettingsModal } from './src/screens/SettingsModal';
@@ -15,6 +16,7 @@ export default function App() {
   const [tab, setTab] = useState<TabKey>('today');
   const [reloadKey, setReloadKey] = useState(0);
   const [mealOpen, setMealOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
   const [weightOpen, setWeightOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fontsLoaded] = useFonts({
@@ -40,9 +42,16 @@ export default function App() {
     <SafeAreaView style={styles.root}>
       <StatusBar style="light" />
       <View style={styles.content}>
-        {tab === 'today' && (
+        {tab === 'today' && captureOpen && (
+          <CaptureScreen
+            onCaptured={() => setCaptureOpen(false)}
+            onCancel={() => setCaptureOpen(false)}
+          />
+        )}
+        {tab === 'today' && !captureOpen && (
           <TodayScreen
-            onLogMeal={() => setMealOpen(true)}
+            onLogMealPhoto={() => setCaptureOpen(true)}
+            onLogMealManual={() => setMealOpen(true)}
             onAddWeight={() => setWeightOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
             reloadKey={reloadKey}

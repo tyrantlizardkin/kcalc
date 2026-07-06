@@ -24,12 +24,14 @@ type TodayData = {
 };
 
 export function TodayScreen({
-  onLogMeal,
+  onLogMealPhoto,
+  onLogMealManual,
   onAddWeight,
   onOpenSettings,
   reloadKey,
 }: {
-  onLogMeal: () => void;
+  onLogMealPhoto: () => void;
+  onLogMealManual: () => void;
   onAddWeight: () => void;
   onOpenSettings: () => void;
   reloadKey: number;
@@ -105,9 +107,14 @@ export function TodayScreen({
           {data.meals.length === 0 && <Text style={styles.empty}>Nothing logged yet.</Text>}
         </View>
 
-        <Pressable accessibilityLabel="Log a meal" accessibilityRole="button" style={styles.logButton} onPress={onLogMeal}>
-          <Text style={styles.logButtonText}>LOG A MEAL</Text>
-        </Pressable>
+        <View style={styles.logRow}>
+          <Pressable accessibilityLabel="Log a meal by photo" accessibilityRole="button" style={styles.logButton} onPress={onLogMealPhoto}>
+            <Text style={styles.logButtonText}>LOG A MEAL</Text>
+          </Pressable>
+          <Pressable accessibilityLabel="Log a meal manually" accessibilityRole="button" style={styles.manualButton} onPress={onLogMealManual}>
+            <Text style={styles.manualButtonText}>MANUAL</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -127,6 +134,9 @@ const styles = StyleSheet.create({
   section: { fontFamily: fonts.bodySemi, fontSize: 11, letterSpacing: 2, color: colors.muted, marginBottom: 12, paddingHorizontal: 4 },
   meals: { gap: 8 },
   empty: { fontFamily: fonts.body, fontSize: 13, color: colors.comment, paddingHorizontal: 4 },
-  logButton: { marginTop: 12, backgroundColor: 'rgba(80,250,123,0.09)', borderWidth: 1, borderColor: 'rgba(80,250,123,0.22)', borderRadius: 8, padding: 15, alignItems: 'center' },
+  logRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  logButton: { flex: 1, backgroundColor: 'rgba(80,250,123,0.09)', borderWidth: 1, borderColor: 'rgba(80,250,123,0.22)', borderRadius: 8, padding: 15, alignItems: 'center' },
   logButtonText: { fontFamily: fonts.condensedBlack, fontSize: 17, color: colors.green, letterSpacing: 2 },
+  manualButton: { flex: 1, backgroundColor: colors.surface, borderRadius: 8, padding: 15, alignItems: 'center' },
+  manualButtonText: { fontFamily: fonts.condensed, fontSize: 14, color: colors.muted, letterSpacing: 2 },
 });
