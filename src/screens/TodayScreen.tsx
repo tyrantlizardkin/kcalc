@@ -3,10 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { HeroBlock } from '../components/HeroBlock';
 import { MacroCard } from '../components/MacroCard';
 import { MealCard } from '../components/MealCard';
+import { OfflineBanner } from '../components/OfflineBanner';
 import { WeightRow } from '../components/WeightRow';
 import { getRepos } from '../db';
 import { weightDeltas, WeightDeltas } from '../lib/deltas';
 import { todayIso } from '../lib/dates';
+import { useIsOnline } from '../lib/network';
 import { daySummary, DaySummary } from '../lib/netCalc';
 import { colors, fonts } from '../theme';
 import { MacroTotals, Meal, Settings, Weight } from '../types';
@@ -39,6 +41,7 @@ export function TodayScreen({
   reloadKey: number;
 }) {
   const [data, setData] = useState<TodayData | null>(null);
+  const online = useIsOnline();
 
   const load = useCallback(async () => {
     const repos = await getRepos();
@@ -83,6 +86,8 @@ export function TodayScreen({
           </Text>
           <Text style={styles.date}>{dateLabel}</Text>
         </View>
+
+        {!online && <OfflineBanner />}
 
         <View style={styles.todayRow}>
           <Pressable accessibilityLabel="Open settings" accessibilityRole="button" style={styles.gear} onPress={onOpenSettings}>
