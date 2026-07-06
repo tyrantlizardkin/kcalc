@@ -17,11 +17,13 @@ export function SettingsModal({
   onClose,
   onSaved,
   onOpenImport,
+  onOpenRestore,
 }: {
   visible: boolean;
   onClose: () => void;
   onSaved: () => void;
   onOpenImport: () => void;
+  onOpenRestore: () => void;
 }) {
   const [kcalTarget, setKcalTarget] = useState('');
   const [protein, setProtein] = useState('');
@@ -232,6 +234,9 @@ export function SettingsModal({
           <Text style={styles.secondaryButtonText}>{backupBusy ? 'BACKING UP…' : 'BACK UP NOW'}</Text>
         </Pressable>
       )}
+      <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={onOpenRestore}>
+        <Text style={styles.secondaryButtonText}>RESTORE FROM DRIVE</Text>
+      </Pressable>
       <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={handleExport}>
         <Text style={styles.secondaryButtonText}>EXPORT DATA (JSON)</Text>
       </Pressable>

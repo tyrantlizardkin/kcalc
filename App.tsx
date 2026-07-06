@@ -17,6 +17,7 @@ import { ManualMealModal } from './src/screens/ManualMealModal';
 import { WeightModal } from './src/screens/WeightModal';
 import { SettingsModal } from './src/screens/SettingsModal';
 import { ImportModal } from './src/screens/ImportModal';
+import { RestoreModal } from './src/screens/RestoreModal';
 
 export default function App() {
   const [tab, setTab] = useState<TabKey>('today');
@@ -27,6 +28,7 @@ export default function App() {
   const [weightOpen, setWeightOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const [fontsLoaded] = useFonts({
     BarlowCondensed_400Regular,
     BarlowCondensed_700Bold,
@@ -124,8 +126,15 @@ export default function App() {
       <TabBar active={tab} onChange={setTab} />
       <ManualMealModal visible={mealOpen} onClose={() => setMealOpen(false)} onSaved={bumpReload} />
       <WeightModal visible={weightOpen} onClose={() => setWeightOpen(false)} onSaved={bumpReload} />
-      <SettingsModal visible={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={bumpReload} onOpenImport={() => setImportOpen(true)} />
+      <SettingsModal
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSaved={bumpReload}
+        onOpenImport={() => setImportOpen(true)}
+        onOpenRestore={() => setRestoreOpen(true)}
+      />
       <ImportModal visible={importOpen} onClose={() => setImportOpen(false)} onSaved={bumpReload} />
+      <RestoreModal visible={restoreOpen} onClose={() => setRestoreOpen(false)} onRestored={bumpReload} />
     </SafeAreaView>
   );
 }
