@@ -1,6 +1,10 @@
 import Constants from 'expo-constants';
 
-export type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+export type GeminiPart =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } }
+  | { functionCall: FunctionCall }
+  | { functionResponse: { name: string; response: Record<string, unknown> } };
 export type GeminiContent = { role: 'user' | 'model'; parts: GeminiPart[] };
 export type FunctionDeclaration = { name: string; description: string; parameters: Record<string, unknown> };
 export type FunctionCall = { name: string; args: Record<string, unknown> };

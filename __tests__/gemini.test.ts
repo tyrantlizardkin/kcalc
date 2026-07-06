@@ -50,3 +50,31 @@ test('returns null text and empty functionCalls for empty candidates', async () 
   const result = await generateContent({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }, fetchImpl);
   expect(result).toEqual({ text: null, functionCalls: [] });
 });
+
+test('supports a multi-turn function-calling round trip (model functionCall + user functionResponse parts)', async () => {
+  let capturedBody: unknown = null;
+  const fetchImpl = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+    capturedBody = JSON.parse(init?.body as string);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: 'Logged 500 kcal.' }] } }] }),
+    } as Response;
+  }) as unknown as typeof fetch;
+
+  const result = await generateContent(
+    {
+      contents: [
+        { role: 'user', parts: [{ text: 'i weigh 180' }] },
+        { role: 'model', parts: [{ functionCall: { name: 'log_meal', args: { kcal: 500 } } }] },
+        { role: 'user', parts: [{ functionResponse: { name: 'log_meal', response: { ok: true } } }] },
+      ],
+    },
+    fetchImpl
+  );
+
+  expect(result).toEqual({ text: 'Logged 500 kcal.', functionCalls: [] });
+  const sentParts = (capturedBody as { contents: { role: string; parts: unknown[] }[] }).contents;
+  expect(sentParts[1].parts).toEqual([{ functionCall: { name: 'log_meal', args: { kcal: 500 } } }]);
+  expect(sentParts[2].parts).toEqual([{ functionResponse: { name: 'log_meal', response: { ok: true } } }]);
+});
